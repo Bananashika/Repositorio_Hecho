@@ -175,8 +175,8 @@ function collectStar (player, star)
             child.enableBody(true, child.x, 0, true, true);
         });
 
-        // Generar una bomba (con ayuda de Martha)
-        var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400); // Intenta spawnear lejos del jugador (Ayuda de gemini)
+        // Generar una bomba (Ayuda de Youtube, pero inpirado en el codigo de Martha)
+        var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400); // Intenta spawnear lejos del jugador
         var bomb = bombs.create(x, 16, 'bomb');
         bomb.setBounce(1);
         bomb.setCollideWorldBounds(true);
