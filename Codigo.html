@@ -1,0 +1,208 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Codigo</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+// Variables Globales 
+var player;
+var stars;
+var bombs;
+var platforms;
+var cursors;
+var jumpCount = 0; // cosa inecesaria que me encontré jugando con el codigo, pero me gustó como queda en el codigo 
+var maxJumps = 2; //aquí se le puede cambiar el numero de saltos :)
+var score = 0;
+var scoreText;
+var highScore = 0;
+var highScoreText;
+var gameOver = false; // (hecho con tutoriales de youtube)
+
+var config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: false // Cambiar a true para ver las cajas de colisión (Ayuda de gemini)
+        }
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+};
+
+var game = new Phaser.Game(config);
+
+function preload ()
+{
+    // Carga de Assets 
+    this.load.image('sky', 'assets/sky.png');
+    this.load.image('ground', 'assets/platform.png');
+    this.load.image('star', 'assets/star.png');
+    this.load.image('bomb', 'assets/bomb.png');
+    this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
+}
+
+function create ()
+{
+    score = 0;
+    gameOver = false; // Resetear estado
+
+    this.add.image(400, 300, 'sky');
+
+    // Score
+    let savedHigh = localStorage.getItem("highScore");
+    highScore = savedHigh ? parseInt(savedHigh) : 0;
+
+    // Plataformas 
+    platforms = this.physics.add.staticGroup();
+    platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+    platforms.create(600, 400, 'ground');
+    platforms.create(50, 250, 'ground');
+    platforms.create(750, 220, 'ground');
+
+    // Jugador 
+    player = this.physics.add.sprite(100, 450, 'dude');
+    player.setBounce(0.2);
+    player.setCollideWorldBounds(true);
+
+    // Animaciones
+    this.anims.create({ key: 'left', frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'turn', frames: [ { key: 'dude', frame: 4 } ], frameRate: 20 });
+    this.anims.create({ key: 'right', frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }), frameRate: 10, repeat: -1 });
+
+    cursors = this.input.keyboard.createCursorKeys();
+
+    // Estrellas
+    stars = this.physics.add.group({
+        key: 'star',
+        repeat: 11,
+        setXY: { x: 12, y: 0, stepX: 70 }
+    });
+    stars.children.iterate(function (child) {
+        child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+    });
+
+    // Bombas
+    bombs = this.physics.add.group();
+
+    // Textos
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '28px', fill: '#000' });
+    highScoreText = this.add.text(16, 50, 'High Score: ' + highScore, { fontSize: '28px', fill: '#000' });
+
+    // Colisiones
+    this.physics.add.collider(player, platforms, () => {
+        if (player.body.touching.down) { // asegura que solo se resetee al tocar abajo (ayuda de gemini)
+            jumpCount = 0;
+        }
+    });
+    this.physics.add.collider(stars, platforms);
+    this.physics.add.collider(bombs, platforms);
+
+    this.physics.add.overlap(player, stars, collectStar, null, this);
+    this.physics.add.collider(player, bombs, endGame, null, this);
+}
+
+function update ()
+{
+    if (gameOver)
+    {
+        return;
+    }
+
+    // Movimiento Horizontal 
+    if (cursors.left.isDown)
+    {
+        player.setVelocityX(-160);
+        player.anims.play('left', true);
+    }
+    else if (cursors.right.isDown)
+    {
+        player.setVelocityX(160);
+        player.anims.play('right', true);
+    }
+    else
+    {
+        player.setVelocityX(0);
+        player.anims.play('turn');
+    }
+
+    //Doble Salto 
+    if (cursors.up.isDown && Phaser.Input.Keyboard.JustDown(cursors.up))
+    {
+        if (jumpCount < maxJumps) {
+            player.setVelocityY(-330);
+            jumpCount++;
+        }
+    }
+}
+
+function collectStar (player, star)
+{
+    star.disableBody(true, true);
+
+    score += 10;
+    scoreText.setText('Score: ' + score);
+
+    // Score en tiempo real
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("highScore", highScore);
+        highScoreText.setText('High Score: ' + highScore);
+    }
+
+    // Reaparición de estrellas y bomba
+    if (stars.countActive(true) === 0)
+    {
+        
+        stars.children.iterate(function (child) {
+            // Posicionar en x 
+            child.enableBody(true, child.x, 0, true, true);
+        });
+
+        // Generar una bomba (con ayuda de Martha)
+        var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400); // Intenta spawnear lejos del jugador (Ayuda de gemini)
+        var bomb = bombs.create(x, 16, 'bomb');
+        bomb.setBounce(1);
+        bomb.setCollideWorldBounds(true);
+        bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+    }
+}
+
+function endGame (player, bomb)
+{
+    if (gameOver) return;
+
+    gameOver = true;
+    player.setTint(0xff0000); // Colorea al jugador de rojo (ayuda vale, una amiga que estudia ingenieria industrial, sé que eso no le sirve de nada, pero fue parte del proceso)
+    player.anims.play('turn');
+    this.physics.pause(); // Detiene las físicas (hecho con tutoriales de youtube)
+
+    // Texto de fin de juego (hecho con gemini)
+    this.add.text(400, 300, 'GAME OVER', { fontSize: '64px', fill: '#FF0000' }).setOrigin(0.5);
+
+    // Reiniciar (hecho con tutoriales de youtube)
+    this.time.delayedCall(2000, () => {
+        this.scene.restart();
+    }, [], this);
+}
+
+</script>
+
+</body>
+</html>
