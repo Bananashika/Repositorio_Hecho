@@ -218,7 +218,7 @@ function endGame (player, bomb)
     gameOver = true;
 
     // animación de explosión 
-    var explosion = this.add.sprite(bombX, bombY, 'explosion'); 
+    var explosion = this.add.sprite(bomb.x, bomb.y, 'explosion');
     explosion.play('explode');
 
     player.setTint(0xff0000); // Colorea al jugador de rojo (ayuda vale, una amiga que estudia ingenieria industrial, sé que eso no le sirve de nada, pero fue parte del proceso)
