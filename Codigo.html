@@ -56,8 +56,8 @@ function preload ()
     this.load.image('star', 'assets/star.png');
     this.load.image('bomb', 'assets/bomb.png');
     this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
-    
-    // spritesheet de la explosión
+     
+    // Spritesheet de la explosión
     this.load.spritesheet('explosion', 'assets/bomb_spritesheet.png', { frameWidth: 64, frameHeight: 64 });
 }
 
@@ -89,10 +89,10 @@ function create ()
     this.anims.create({ key: 'turn', frames: [ { key: 'dude', frame: 4 } ], frameRate: 20 });
     this.anims.create({ key: 'right', frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }), frameRate: 10, repeat: -1 });
 
-    // animación de la explosión
+    // Animación de la explosión
     this.anims.create({
         key: 'explode',
-        frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 23 }), 
+        frames: this.anims.generateFrameNumbers('explosion'), 
         frameRate: 20,
         hideOnComplete: true
     });
@@ -100,13 +100,27 @@ function create ()
     cursors = this.input.keyboard.createCursorKeys();
 
     // Estrellas
-    stars = this.physics.add.group({
-        key: 'star',
-        repeat: 11,
-        setXY: { x: 12, y: 0, stepX: 70 }
-    });
-    stars.children.iterate(function (child) {
-        child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+    stars = this.physics.add.group();
+
+    var starCoords = [
+        { x: 400, y: 50 },
+        { x: 440, y: 150 },
+        { x: 550, y: 150 },
+        { x: 470, y: 230 },
+        { x: 520, y: 380 },
+        { x: 400, y: 300 },
+        { x: 280, y: 380 },
+        { x: 330, y: 230 },
+        { x: 250, y: 150 },
+        { x: 360, y: 150 },
+        { x: 400, y: 150 },
+        { x: 400, y: 220 }
+    ];
+
+    starCoords.forEach(coord => {
+        var star = stars.create(coord.x, coord.y, 'star');
+        star.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+        star.body.allowGravity = false; // quiuita gravedad 
     });
 
     // Bombas
@@ -184,6 +198,8 @@ function collectStar (player, star)
         stars.children.iterate(function (child) {
             // Posicionar en x 
             child.enableBody(true, child.x, 0, true, true);
+            // esto hace que la gravedad vuelva a las estrellas despues de la reaparición
+            child.body.allowGravity = true; 
         });
 
         // Generar una bomba (Ayuda de Youtube, pero inpirado en el codigo de Martha)
@@ -200,15 +216,13 @@ function endGame (player, bomb)
     if (gameOver) return;
 
     gameOver = true;
-    
-    // play para la explosión
-    bomb.disableBody(true, true); 
-    var explosion = this.add.sprite(bomb.x, bomb.y, 'explosion');
+
+    // animación de explosión 
+    var explosion = this.add.sprite(bombX, bombY, 'explosion'); 
     explosion.play('explode');
 
     player.setTint(0xff0000); // Colorea al jugador de rojo (ayuda vale, una amiga que estudia ingenieria industrial, sé que eso no le sirve de nada, pero fue parte del proceso)
     player.anims.play('turn');
-    this.physics.pause(); // Detiene las físicas (hecho con tutoriales de youtube)
 
     // Texto de fin de juego (hecho con gemini)
     this.add.text(400, 300, 'GAME OVER', { fontSize: '64px', fill: '#FF0000' }).setOrigin(0.5);
